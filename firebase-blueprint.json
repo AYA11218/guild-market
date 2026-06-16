@@ -1,0 +1,111 @@
+{
+  "entities": {
+    "artisan": {
+      "title": "Artisan",
+      "description": "A local artisan seller on the platform.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "businessName": { "type": "string" },
+        "bio": { "type": "string" },
+        "city": { "type": "string" },
+        "category": { "type": "string" },
+        "profileImage": { "type": "string" },
+        "ownerId": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "businessName", "bio", "city", "category", "ownerId", "createdAt"]
+    },
+    "product": {
+      "title": "Product",
+      "description": "An artisan handcrafted product listed on the platform.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "artisanId": { "type": "string" },
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "price": { "type": "number" },
+        "stock": { "type": "number" },
+        "category": { "type": "string" },
+        "imageUrl": { "type": "string" },
+        "location": { "type": "string" },
+        "ownerId": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "artisanId", "title", "description", "price", "stock", "category", "imageUrl", "location", "ownerId", "createdAt"]
+    },
+    "order": {
+      "title": "Order",
+      "description": "A purchase transaction for artisan goods.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "buyerId": { "type": "string" },
+        "buyerEmail": { "type": "string" },
+        "buyerName": { "type": "string" },
+        "items": { "type": "array" },
+        "totalAmount": { "type": "number" },
+        "paymentStatus": { "type": "string", "enum": ["pending", "succeeded", "failed"] },
+        "shippingAddress": { "type": "string" },
+        "cardBrand": { "type": "string" },
+        "last4": { "type": "string" },
+        "transactionId": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "buyerId", "buyerEmail", "buyerName", "items", "totalAmount", "paymentStatus", "shippingAddress", "cardBrand", "last4", "transactionId", "createdAt"]
+    },
+    "review": {
+      "title": "Review",
+      "description": "A customer review and rating for a product.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "productId": { "type": "string" },
+        "buyerId": { "type": "string" },
+        "buyerName": { "type": "string" },
+        "rating": { "type": "number" },
+        "comment": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "productId", "buyerId", "buyerName", "rating", "comment", "createdAt"]
+    },
+    "stockNotification": {
+      "title": "StockNotification",
+      "description": "A notification request for when a product is restocked.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "productId": { "type": "string" },
+        "productTitle": { "type": "string" },
+        "email": { "type": "string" },
+        "userId": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "productId", "productTitle", "email", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/artisans/{artisanId}": {
+      "schema": "artisan",
+      "description": "Collection of local artisan business profiles"
+    },
+    "/products/{productId}": {
+      "schema": "product",
+      "description": "Collection of products listed by artisans"
+    },
+    "/orders/{orderId}": {
+      "schema": "order",
+      "description": "Collection of orders placed by buyers"
+    },
+    "/reviews/{reviewId}": {
+      "schema": "review",
+      "description": "Collection of product reviews"
+    },
+    "/stockNotifications/{notificationId}": {
+      "schema": "stockNotification",
+      "description": "Collection of restock notification requests"
+    }
+  }
+}

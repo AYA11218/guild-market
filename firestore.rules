@@ -1,0 +1,151 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Global Catch-all Deny to enforce Zero Trust
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Global Authorization and Identity Primitives
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isVerifiedUser() {
+      return isSignedIn() && request.auth.token.email_verified == true;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    // Entity Schema Validation Blueprints
+
+    // Artisan Profile Validation
+    function isValidArtisan(data) {
+      return data.keys().hasAll(['id', 'businessName', 'bio', 'city', 'category', 'profileImage', 'ownerId', 'createdAt'])
+        && data.keys().size() == 8
+        && data.id is string && data.id.size() <= 128 && data.id == data.ownerId
+        && data.businessName is string && data.businessName.size() >= 2 && data.businessName.size() <= 150
+        && data.bio is string && data.bio.size() <= 1000
+        && data.city is string && data.city.size() >= 2 && data.city.size() <= 100
+        && data.category is string && data.category.size() >= 2 && data.category.size() <= 50
+        && data.profileImage is string && data.profileImage.size() <= 1000
+        && data.ownerId == request.auth.uid
+        && data.createdAt == request.time;
+    }
+
+    // Product Listing Validation
+    function isValidProduct(data) {
+      return data.keys().hasAll(['id', 'artisanId', 'title', 'description', 'price', 'stock', 'category', 'imageUrl', 'location', 'ownerId', 'createdAt', 'updatedAt'])
+        && data.keys().size() == 12
+        && data.id is string && data.id.size() <= 128
+        && data.artisanId is string && data.artisanId.size() <= 128
+        && data.title is string && data.title.size() >= 2 && data.title.size() <= 150
+        && data.description is string && data.description.size() <= 3000
+        && data.price is number && data.price >= 0 && data.price <= 1000000
+        && data.stock is int && data.stock >= 0 && data.stock <= 100000
+        && data.category is string && data.category.size() >= 2 && data.category.size() <= 50
+        && data.imageUrl is string && data.imageUrl.size() <= 1000
+        && data.location is string && data.location.size() >= 2 && data.location.size() <= 100
+        && data.ownerId == request.auth.uid
+        && data.createdAt is timestamp
+        && data.updatedAt == request.time;
+    }
+
+    // Order Placement Validation
+    function isValidOrder(data) {
+      return data.keys().hasAll(['id', 'buyerId', 'buyerEmail', 'buyerName', 'items', 'totalAmount', 'paymentStatus', 'shippingAddress', 'cardBrand', 'last4', 'transactionId', 'createdAt'])
+        && (data.keys().size() == 12 || (data.keys().size() == 14 
+            && data.keys().hasAll(['paymentMethodType', 'paymentMethodDetails'])
+            && data.paymentMethodType is string && data.paymentMethodType.size() <= 100
+            && data.paymentMethodDetails is string && data.paymentMethodDetails.size() <= 1000))
+        && data.id is string && data.id.size() <= 128
+        && data.buyerId == request.auth.uid
+        && data.buyerEmail is string && data.buyerEmail.size() <= 200
+        && data.buyerName is string && data.buyerName.size() <= 200
+        && data.items is list && data.items.size() > 0 && data.items.size() <= 50
+        && data.totalAmount is number && data.totalAmount >= 0
+        && data.paymentStatus in ['pending', 'succeeded', 'failed']
+        && data.shippingAddress is string && data.shippingAddress.size() >= 5 && data.shippingAddress.size() <= 500
+        && data.cardBrand is string && data.cardBrand.size() <= 50
+        && data.last4 is string && data.last4.size() <= 10
+        && data.transactionId is string && data.transactionId.size() <= 128
+        && data.createdAt == request.time;
+    }
+
+    // Customer Review Validation
+    function isValidReview(data) {
+      return data.keys().hasAll(['id', 'productId', 'buyerId', 'buyerName', 'rating', 'comment', 'createdAt'])
+        && data.keys().size() == 7
+        && data.id is string && data.id.size() <= 128
+        && data.productId is string && data.productId.size() <= 128
+        && data.buyerId == request.auth.uid
+        && data.buyerName is string && data.buyerName.size() <= 200
+        && data.rating is number && data.rating >= 1 && data.rating <= 5
+        && data.comment is string && data.comment.size() <= 2000
+        && data.createdAt == request.time;
+    }
+
+    // Stock Restock Notification Request Validation
+    function isValidStockNotification(data) {
+      return data.keys().hasAll(['id', 'productId', 'productTitle', 'email', 'createdAt'])
+        && (data.keys().size() == 5 || (data.keys().size() == 6 && data.keys().hasAll(['userId']) && data.userId is string && data.userId.size() <= 128))
+        && data.id is string && data.id.size() <= 128
+        && data.productId is string && data.productId.size() <= 128
+        && data.productTitle is string && data.productTitle.size() >= 1 && data.productTitle.size() <= 250
+        && data.email is string && data.email.size() >= 3 && data.email.size() <= 250
+        && data.createdAt == request.time;
+    }
+
+    // Rules Mapping for Collections
+
+    match /artisans/{artisanId} {
+      allow get, list: if true;
+      allow create: if isVerifiedUser() && isValidId(artisanId) && artisanId == request.auth.uid && isValidArtisan(incoming());
+      allow update: if isVerifiedUser() && isValidId(artisanId) && artisanId == request.auth.uid && isValidArtisan(incoming()) && incoming().createdAt == existing().createdAt;
+      allow delete: if isVerifiedUser() && isValidId(artisanId) && artisanId == request.auth.uid;
+    }
+
+    match /products/{productId} {
+      allow get, list: if true;
+      allow create: if isVerifiedUser() && isValidId(productId) && isValidProduct(incoming()) 
+                     && exists(/databases/$(database)/documents/artisans/$(incoming().artisanId))
+                     && incoming().createdAt == request.time;
+      allow update: if isVerifiedUser() && isValidId(productId) && existing().ownerId == request.auth.uid && isValidProduct(incoming())
+                     && incoming().createdAt == existing().createdAt
+                     && incoming().ownerId == existing().ownerId;
+      allow delete: if isVerifiedUser() && isValidId(productId) && existing().ownerId == request.auth.uid;
+    }
+
+    match /orders/{orderId} {
+      allow get, list: if isVerifiedUser() && (resource.data.buyerId == request.auth.uid || resource.data.items[0].artisanId == request.auth.uid);
+      allow create: if isVerifiedUser() && isValidId(orderId) && isValidOrder(incoming());
+      allow update: if false; // Orders are immutable once finalized to secure payments
+      allow delete: if false; // Historic orders cannot be deleted
+    }
+
+    match /reviews/{reviewId} {
+      allow get, list: if true;
+      allow create: if isVerifiedUser() && isValidId(reviewId) && isValidReview(incoming())
+                     && exists(/databases/$(database)/documents/products/$(incoming().productId));
+      allow update: if false; // Reviews are immutable to prevent manipulation
+      allow delete: if isVerifiedUser() && existing().buyerId == request.auth.uid;
+    }
+
+    match /stockNotifications/{notificationId} {
+      allow create: if isValidId(notificationId) && isValidStockNotification(incoming())
+                     && exists(/databases/$(database)/documents/products/$(incoming().productId));
+      allow read, update, delete: if false; // Private ledger for marketing/artisans
+    }
+  }
+}

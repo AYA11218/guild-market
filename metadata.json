@@ -1,0 +1,6 @@
+{
+  "name": "Local Artisan Marketplace",
+  "description": "A high-fidelity niche platform for local artisan goods featuring persistent listings, secure payment checkout, and individual artisan profiles.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
